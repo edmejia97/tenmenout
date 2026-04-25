@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Ten Men Out" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <title>Ten Men Out — Fantasy Baseball</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0e1a;
+      --surface:   #111827;
+      --surface2:  #1a2235;
+      --border:    #1e2d45;
+      --accent:    #f5a623;
+      --accent2:   #e8572a;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --font-head: 'Barlow Condensed', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      overflow: hidden;
+    }
+
+    /* ── App shell ──────────────────────────────────────────────────────────── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bot);
+    }
+
+    /* ── Header ─────────────────────────────────────────────────────────────── */
+    header {
+      flex-shrink: 0;
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      padding: 12px 16px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--accent);
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .header-sub {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .import-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--accent);
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 7px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+    .import-btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* ── Nav tabs ────────────────────────────────────────────────────────────── */
+    nav {
+      flex-shrink: 0;
+      display: flex;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-tab {
+      flex: 1;
+      padding: 11px 4px;
+      text-align: center;
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Main content area ───────────────────────────────────────────────────── */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .panel { display: none; padding: 12px; }
+    .panel.active { display: block; }
+
+    /* ── Empty state ─────────────────────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .empty-body { font-size: 12px; line-height: 1.7; max-width: 280px; margin: 0 auto 20px; }
+    .empty-steps {
+      text-align: left;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      max-width: 300px;
+      margin: 0 auto;
+      font-size: 11px;
+      line-height: 2;
+      color: var(--text);
+    }
+    .empty-steps strong { color: var(--accent); font-family: var(--font-head); font-size: 13px; letter-spacing: 1px; }
+
+    /* ── View toggle ─────────────────────────────────────────────────────────── */
+    .view-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .view-btn {
+      flex: 1;
+      padding: 8px 4px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--muted);
+      font-family: var(--font-head);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .view-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+    /* ── Standings table ─────────────────────────────────────────────────────── */
+    .standings-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    thead tr {
+      background: var(--surface2);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    th {
+      padding: 8px 6px;
+      text-align: right;
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    th:first-child { text-align: left; padding-left: 8px; }
+
+    td {
+      padding: 7px 6px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      font-size: 11px;
+    }
+    td:first-child { text-align: left; padding-left: 8px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      background: var(--surface2);
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      margin-right: 5px;
+      color: var(--muted);
+    }
+    .rank-badge.gold   { background: var(--accent);  color: var(--bg); }
+    .rank-badge.silver { background: #94a3b8;         color: var(--bg); }
+    .rank-badge.bronze { background: var(--accent2);  color: var(--bg); }
+
+    .pts-cell { font-family: var(--font-head); font-size: 14px; font-weight: 800; color: var(--accent); }
+
+    .note {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    /* ── Trade tab ───────────────────────────────────────────────────────────── */
+    .trade-teams-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .trade-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .trade-col-label {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .trade-col select {
+      width: 100%;
+      padding: 8px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+    .trade-arrow {
+      font-size: 22px;
+      color: var(--muted);
+      padding-top: 30px;
+      flex-shrink: 0;
+    }
+    .trade-bucket {
+      min-height: 44px;
+      background: var(--bg);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+      padding: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .trade-chip {
+      background: var(--accent2);
+      color: white;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 10px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-head);
+      letter-spacing: 0.3px;
+    }
+    .chip-remove { cursor: pointer; opacity: 0.8; font-size: 10px; }
+    .chip-remove:hover { opacity: 1; }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .search-input::placeholder { color: var(--muted); }
+
+    .player-list {
+      max-height: 200px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .player-group-label {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      padding: 8px 10px 4px;
+    }
+    .player-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      transition: background 0.1s;
+      border-bottom: 1px solid var(--border);
+    }
+    .player-row:last-child { border-bottom: none; }
+    .player-row:active { background: var(--surface2); }
+    .player-row:hover  { background: var(--surface); }
+    .player-name { flex: 1; font-size: 12px; color: var(--text); }
+    .player-type {
+      font-family: var(--font-head);
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 3px;
+      letter-spacing: 0.5px;
+    }
+    .player-type.batter  { background: #1e3a5f; color: #7ab8f5; }
+    .player-type.pitcher { background: #3f1515; color: #f57a7a; }
+    .player-stat { font-size: 10px; color: var(--muted); white-space: nowrap; }
+
+    .trade-hint {
+      font-size: 11px;
+      color: var(--muted);
+      padding: 12px 10px;
+      text-align: center;
+    }
+
+    /* ── Trade result ────────────────────────────────────────────────────────── */
+    .result-header {
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 14px 0 6px;
+    }
+
+    .impact-table { width: 100%; font-size: 11px; margin-bottom: 10px; }
+    .impact-table th { font-family: var(--font-head); font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase; padding: 4px 0; }
+    .impact-table th:first-child { text-align: left; }
+    .impact-table th:last-child  { text-align: right; }
+    .impact-table td { padding: 3px 0; }
+    .impact-table td:first-child { text-align: left; }
+    .impact-table td:last-child  { text-align: right; }
+    .impact-table .divider td { border-top: 1px solid var(--border); padding-top: 6px; }
+
+    .verdict {
+      text-align: center;
+      font-family: var(--font-head);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 10px;
+      background: var(--surface);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 11px;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.15s;
+    }
+    .btn-secondary { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+    .btn-danger    { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+
+    /* ── Import modal ────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px 16px 0 0;
+      padding: 20px 16px calc(20px + var(--safe-bot));
+      width: 100%;
+      max-width: 560px;
+    }
+    .modal-title {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .modal-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+    .modal textarea {
+      width: 100%;
+      height: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 10px;
+      resize: none;
+      margin-bottom: 10px;
+    }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns .btn { margin-top: 0; flex: 1; }
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .modal-error { color: var(--red); font-size: 11px; margin-top: 6px; }
+    .modal-success { color: var(--green); font-size: 11px; margin-top: 6px; }
+
+    /* ── Data badge ──────────────────────────────────────────────────────────── */
+    .data-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--surface2);
+      border-radius: 4px;
+      padding: 3px 8px;
+    }
+    .data-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .data-dot.stale { background: var(--accent); }
+    .data-dot.missing { background: var(--red); }
+
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div>
+      <div class="header-title">⚾ Ten Men Out</div>
+      <div class="header-sub">Fantasy Tracker</div>
+    </div>
+    <button class="import-btn" id="btn-import">↑ Import</button>
+  </header>
+
+  <nav>
+    <div class="nav-tab active" data-tab="standings">Standings</div>
+    <div class="nav-tab" data-tab="trades">Trades</div>
+  </nav>
+
+  <main>
+
+    <!-- STANDINGS PANEL -->
+    <div class="panel active" id="panel-standings">
+      <div id="standings-content">
+        <div class="empty">
+          <div class="empty-icon">📊</div>
+          <div class="empty-title">No Data Yet</div>
+          <div class="empty-body">Import your league data from the Chrome extension to get started.</div>
+          <div class="empty-steps">
+            <strong>How to import</strong><br>
+            1. Open the Chrome extension<br>
+            2. Go to Export tab<br>
+            3. Tap "⬇ Raw JSON"<br>
+            4. Come back here → Import
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRADES PANEL -->
+    <div class="panel" id="panel-trades">
+      <div id="trades-content">
+        <div class="empty">
+          <div class="empty-icon">🔄</div>
+          <div class="empty-title">No Data Yet</div>
+          <div class="empty-body">Import your league data first to use the trade analyzer.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">Import League Data</div>
+    <div class="modal-sub">
+      In the Chrome extension → Export tab → click "⬇ Raw JSON (debug)" → open the file → copy all the text → paste it below.
+    </div>
+    <textarea id="import-textarea" placeholder='Paste JSON here... {"standings": {...}, "ros": {...}}'></textarea>
+    <div id="import-msg"></div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" id="btn-modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="btn-modal-import">Import</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const BAT_CATS = ["BA","R","HR","RBI","SB"];
+const PIT_CATS = ["ERA","QS","W","K","SHLD"];
+const ALL_CATS = [...BAT_CATS, ...PIT_CATS];
+const LOWER_IS_BETTER = new Set(["ERA"]);
+const CAT_LABELS = { BA:"BA", R:"R", HR:"HR", RBI:"RBI", SB:"SB", ERA:"ERA", QS:"QS", W:"W", K:"K", SHLD:"S+H" };
+const SEASON_START = new Date("2026-03-25");
+const SEASON_DAYS  = 187;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let _standings   = null;
+let _ros         = null;
+let _view        = "projected";
+let _tradeTeamA  = null;
+let _tradeTeamB  = null;
+let _tradeSendsA = [];
+let _tradeSendsB = [];
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+function saveData() {
+  try {
+    localStorage.setItem("tenmenout_standings", JSON.stringify(_standings));
+    localStorage.setItem("tenmenout_ros",       JSON.stringify(_ros));
+  } catch(e) { console.warn("localStorage save failed", e); }
+}
+
+function loadData() {
+  try {
+    const s = localStorage.getItem("tenmenout_standings");
+    const r = localStorage.getItem("tenmenout_ros");
+    if (s) _standings = JSON.parse(s);
+    if (r) _ros       = JSON.parse(r);
+  } catch(e) { console.warn("localStorage load failed", e); }
+}
+
+// ── Roto math ─────────────────────────────────────────────────────────────────
+function rankTeams(teams, cat) {
+  const lb = LOWER_IS_BETTER.has(cat);
+  const sorted = [...teams].sort((a,b) => lb ? a[cat]-b[cat] : b[cat]-a[cat]);
+  const ranks = {};
+  sorted.forEach((t,i) => { ranks[t.name] = i+1; });
+  return ranks;
+}
+
+function computeRoto(teams) {
+  if (!teams?.length) return [];
+  const n = teams.length;
+  const catRanks = {};
+  ALL_CATS.forEach(cat => { catRanks[cat] = rankTeams(teams, cat); });
+  return teams.map(t => {
+    const pts = {}; let total = 0;
+    ALL_CATS.forEach(cat => {
+      const rank = catRanks[cat][t.name] || n;
+      pts[cat] = n - rank + 1;
+      total += pts[cat];
+    });
+    return { ...t, pts, total, catRanks: Object.fromEntries(ALL_CATS.map(c => [c, catRanks[c][t.name]])) };
+  }).sort((a,b) => b.total - a.total);
+}
+
+function getSeasonFraction() {
+  const elapsed = Math.max(0, Math.min(SEASON_DAYS,
+    Math.floor((new Date() - SEASON_START) / 86400000)
+  ));
+  return elapsed / SEASON_DAYS;
+}
+
+// ── Data builders ─────────────────────────────────────────────────────────────
+function buildYTDTeams() {
+  if (!_standings?.teams) return null;
+  return _standings.teams.map(t => ({
+    name: t.name, hasROS: false,
+    _livePts: t.catPts || null, _liveTotal: t.overall?.totalPts || null,
+    BA: t.batting?.BA??0,   R: t.batting?.R??0,    HR: t.batting?.HR??0,
+    RBI: t.batting?.RBI??0, SB: t.batting?.SB??0,  ERA: t.pitching?.ERA??0,
+    QS: t.pitching?.QS??0,  W: t.pitching?.W??0,   K: t.pitching?.K??0,
+    SHLD: t.pitching?.SHLD??0,
+  }));
+}
+
+function buildROSTeams() {
+  if (!_ros) return null;
+  const teams = Object.values(_ros);
+  if (!teams.length) return null;
+  return teams.map(t => ({
+    name: t.teamName, hasROS: true,
+    BA: t.batting?.BA??0,   R: t.batting?.R??0,    HR: t.batting?.HR??0,
+    RBI: t.batting?.RBI??0, SB: t.batting?.SB??0,  ERA: t.pitching?.ERA??0,
+    QS: t.pitching?.QS??0,  W: t.pitching?.W??0,   K: t.pitching?.K??0,
+    SHLD: t.pitching?.SHLD??0,
+  }));
+}
+
+function buildProjectedTeamsWithRos(rosData) {
+  const sf = getSeasonFraction(), rf = 1-sf;
+  if (!_standings?.teams) return null;
+  return _standings.teams.map(t => {
+    const rt = rosData?.[t.name] || null;
+    const hasROS = !!rt;
+    const yb = t.batting||{}, yp = t.pitching||{};
+    const rb = rt?.batting||{}, rp = rt?.pitching||{};
+    return {
+      name: t.name, hasROS, _sf: sf,
+      BA:   hasROS ? (yb.BA||0)*sf + (rb.BA||0)*rf : (yb.BA||0),
+      R:    (yb.R||0)+(rb.R||0),   HR:  (yb.HR||0)+(rb.HR||0),
+      RBI:  (yb.RBI||0)+(rb.RBI||0), SB: (yb.SB||0)+(rb.SB||0),
+      ERA:  hasROS ? (yp.ERA||0)*sf + (rp.ERA||0)*rf : (yp.ERA||0),
+      QS:   (yp.QS||0)+(rp.QS||0), W:  (yp.W||0)+(rp.W||0),
+      K:    (yp.K||0)+(rp.K||0),   SHLD:(yp.SHLD||0)+(rp.SHLD||0),
+    };
+  });
+}
+
+function buildProjectedTeams() { return buildProjectedTeamsWithRos(_ros); }
+
+// ── Formatting ────────────────────────────────────────────────────────────────
+function fmt(val, cat) {
+  if (cat==="BA"||cat==="ERA") return (val||0).toFixed(3);
+  return Math.round(val||0).toString();
+}
+
+function rankBadge(i) {
+  const cls = i===0?"gold":i===1?"silver":i===2?"bronze":"";
+  return `<span class="rank-badge ${cls}">${i+1}</span>`;
+}
+
+// ── Standings rendering ────────────────────────────────────────────────────────
+function renderStandings() {
+  const el = document.getElementById("standings-content");
+  if (!el) return;
+
+  let teams;
+  if (_view === "ytd")      teams = buildYTDTeams();
+  else if (_view === "ros") teams = buildROSTeams();
+  else                      teams = buildProjectedTeams();
+
+  if (!teams?.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">No Data Yet</div>
+      <div class="empty-body">Import your league data from the Chrome extension.</div>
+      <div class="empty-steps">
+        <strong>How to import</strong><br>
+        1. Open the Chrome extension<br>
+        2. Go to Export tab<br>
+        3. Tap "⬇ Raw JSON (debug)"<br>
+        4. Copy the file contents<br>
+        5. Come back here → Import
+      </div>
+    </div>`;
+    return;
+  }
+
+  const n = teams.length;
+  let ranked;
+  const isYTD = _view === "ytd";
+
+  if (isYTD && teams[0]?._livePts) {
+    ranked = [...teams].sort((a,b) => (b._liveTotal||0)-(a._liveTotal||0));
+    ranked = ranked.map((t,i) => ({
+      ...t, pts: t._livePts, total: t._liveTotal||0,
+      catRanks: Object.fromEntries(ALL_CATS.map(c=>[c,0])),
+    }));
+  } else {
+    ranked = computeRoto(teams);
+  }
+
+  const viewLabel = {ytd:"Year-to-Date Standings", ros:"Rest of Season Rankings", projected:"Full Season Projection"}[_view];
+  const sf = getSeasonFraction();
+
+  let html = `
+    <div class="view-toggle">
+      <button class="view-btn ${_view==="ytd"?"active":""}" data-v="ytd">📅 YTD</button>
+      <button class="view-btn ${_view==="ros"?"active":""}" data-v="ros">🔮 ROS</button>
+      <button class="view-btn ${_view==="projected"?"active":""}" data-v="projected">📈 Projected</button>
+    </div>
+    <div class="standings-wrap">
+    <table>
+      <thead><tr>
+        <th>Team</th>
+        ${ALL_CATS.map(c=>`<th>${CAT_LABELS[c]}</th>`).join("")}
+        <th>PTS</th>
+      </tr></thead>
+      <tbody>`;
+
+  ranked.forEach((t,i) => {
+    const noROS = _view==="projected" && !t.hasROS
+      ? ' <span style="color:#ef4444;font-size:9px">*</span>' : "";
+    html += `<tr>
+      <td>${rankBadge(i)}${t.name}${noROS}</td>
+      ${ALL_CATS.map(cat => {
+        const rank = t.catRanks[cat]||0;
+        const color = rank===1?"#22c55e":rank===n?"#ef4444":"var(--text)";
+        return `<td style="color:${rank?color:"var(--text)"}">${fmt(t[cat],cat)}</td>`;
+      }).join("")}
+      <td class="pts-cell">${Math.round(t.total)}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  if (isYTD && teams[0]?._livePts) {
+    html += `<p class="note">Points from CBS live standings.</p>`;
+  } else if (_view==="projected") {
+    html += `<p class="note">BA & ERA weighted ${Math.round(sf*100)}% YTD / ${Math.round((1-sf)*100)}% ROS. * = no ROS data.</p>`;
+  }
+
+  el.innerHTML = html;
+
+  // Wire view buttons
+  el.querySelectorAll(".view-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      _view = btn.dataset.v;
+      renderStandings();
+    });
+  });
+}
+
+// ── Trade tab ─────────────────────────────────────────────────────────────────
+function getTeamPlayers(name) { return _ros?.[name]?.players || []; }
+
+function renderTrades() {
+  const el = document.getElementById("trades-content");
+  if (!el) return;
+
+  if (!_standings?.teams) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">🔄</div>
+      <div class="empty-title">No Data</div>
+      <div class="empty-body">Import your league data first.</div>
+    </div>`;
+    return;
+  }
+
+  const teams = _standings.teams.map(t=>t.name);
+  const opts = `<option value="">— pick team —</option>` +
+    teams.map(t=>`<option value="${t}" ${t===_tradeTeamA||t===_tradeTeamB?"":""}>${t}</option>`).join("");
+
+  const inTrade = new Set([..._tradeSendsA,..._tradeSendsB].map(p=>p.name));
+  const playersA = getTeamPlayers(_tradeTeamA).filter(p=>!inTrade.has(p.name));
+  const playersB = getTeamPlayers(_tradeTeamB).filter(p=>!inTrade.has(p.name));
+
+  const renderBucket = (players, side) => players.length
+    ? players.map(p=>`<div class="trade-chip">${p.name}<span class="chip-remove" data-name="${p.name}" data-side="${side}">✕</span></div>`).join("")
+    : `<div class="trade-hint" style="padding:4px 0">Tap players below</div>`;
+
+  const renderGroup = (players, team, label) => {
+    if (!team) return "";
+    const query = document.getElementById("trade-search-input")?.value?.toLowerCase()||"";
+    const filtered = players.filter(p => !query || p.name.toLowerCase().includes(query));
+    if (!filtered.length) return `<div class="player-group-label">${label}</div><div class="trade-hint">No matches</div>`;
+    return `<div class="player-group-label">${label}</div>` +
+      filtered.map(p=>`
+        <div class="player-row" data-player='${JSON.stringify(p)}' data-team="${team}">
+          <span class="player-name">${p.name}</span>
+          <span class="player-type ${p.type}">${p.type==="batter"?"BAT":"PIT"}</span>
+          <span class="player-stat">${p.type==="batter"
+            ?`${Math.round(p.HR||0)}HR .${String(Math.round((p.BA||0)*1000)).padStart(3,"0")}BA`
+            :`${Math.round(p.K||0)}K ${(p.ERA||0).toFixed(2)}ERA`
+          }</span>
+        </div>`).join("");
+  };
+
+  el.innerHTML = `
+    <div class="trade-teams-row">
+      <div class="trade-col">
+        <div class="trade-col-label">Team A sends</div>
+        <select id="sel-a">${opts.replace(`value="${_tradeTeamA}"`,`value="${_tradeTeamA}" selected`)}</select>
+        <div class="trade-bucket" id="bucket-a">${renderBucket(_tradeSendsA,"a")}</div>
+      </div>
+      <div class="trade-arrow">⇄</div>
+      <div class="trade-col">
+        <div class="trade-col-label">Team B sends</div>
+        <select id="sel-b">${opts.replace(`value="${_tradeTeamB}"`,`value="${_tradeTeamB}" selected`)}</select>
+        <div class="trade-bucket" id="bucket-b">${renderBucket(_tradeSendsB,"b")}</div>
+      </div>
+    </div>
+    <input class="search-input" id="trade-search-input" placeholder="🔍 Search players..." value="" />
+    <div class="player-list" id="player-list">
+      ${(_tradeTeamA||_tradeTeamB)
+        ? renderGroup(playersA,_tradeTeamA,_tradeTeamA||"") + renderGroup(playersB,_tradeTeamB,_tradeTeamB||"")
+        : `<div class="trade-hint">Select teams above to see players</div>`}
+    </div>
+    <button class="btn btn-secondary" id="trade-reset-btn">↺ Reset Trade</button>
+    <div id="trade-result-area">${buildTradeResult()}</div>
+  `;
+
+  // Dropdowns
+  document.getElementById("sel-a").value = _tradeTeamA||"";
+  document.getElementById("sel-b").value = _tradeTeamB||"";
+  document.getElementById("sel-a").addEventListener("change", e => {
+    _tradeTeamA = e.target.value||null; _tradeSendsA = []; renderTrades();
+  });
+  document.getElementById("sel-b").addEventListener("change", e => {
+    _tradeTeamB = e.target.value||null; _tradeSendsB = []; renderTrades();
+  });
+
+  // Search
+  document.getElementById("trade-search-input").addEventListener("input", () => {
+    const query = document.getElementById("trade-search-input").value.toLowerCase();
+    const allA  = getTeamPlayers(_tradeTeamA).filter(p=>!inTrade.has(p.name));
+    const allB  = getTeamPlayers(_tradeTeamB).filter(p=>!inTrade.has(p.name));
+    document.getElementById("player-list").innerHTML =
+      (_tradeTeamA||_tradeTeamB)
+        ? renderGroup(allA.filter(p=>!query||p.name.toLowerCase().includes(query)),_tradeTeamA,_tradeTeamA||"") +
+          renderGroup(allB.filter(p=>!query||p.name.toLowerCase().includes(query)),_tradeTeamB,_tradeTeamB||"")
+        : `<div class="trade-hint">Select teams above</div>`;
+    wirePlayerRows();
+  });
+
+  // Chip removes
+  el.querySelectorAll(".chip-remove").forEach(btn => {
+    btn.addEventListener("click", e => {
+      e.stopPropagation();
+      const name = btn.dataset.name, side = btn.dataset.side;
+      if (side==="a") _tradeSendsA = _tradeSendsA.filter(p=>p.name!==name);
+      else            _tradeSendsB = _tradeSendsB.filter(p=>p.name!==name);
+      renderTrades();
+    });
+  });
+
+  // Reset
+  document.getElementById("trade-reset-btn").addEventListener("click", () => {
+    _tradeSendsA=[]; _tradeSendsB=[];
+    _tradeTeamA=null; _tradeTeamB=null;
+    renderTrades();
+  });
+
+  wirePlayerRows();
+}
+
+function wirePlayerRows() {
+  document.querySelectorAll(".player-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const player = JSON.parse(row.dataset.player);
+      const team   = row.dataset.team;
+      if (team===_tradeTeamA && !_tradeSendsA.find(p=>p.name===player.name)) _tradeSendsA.push(player);
+      if (team===_tradeTeamB && !_tradeSendsB.find(p=>p.name===player.name)) _tradeSendsB.push(player);
+      renderTrades();
+    });
+  });
+}
+
+function applyTrade() {
+  if (!_ros||!_tradeTeamA||!_tradeTeamB) return null;
+  if (!_tradeSendsA.length&&!_tradeSendsB.length) return null;
+  const mod = JSON.parse(JSON.stringify(_ros));
+
+  const swap = (player, from, to) => {
+    const f = mod[from], t = mod[to];
+    if (!f||!t) return;
+    if (player.type==="batter") {
+      const fb=f.batting, tb=t.batting;
+      fb._AB=(fb._AB||0)-player.AB; fb._H=(fb._H||0)-player.H;
+      fb.R=(fb.R||0)-player.R; fb.HR=(fb.HR||0)-player.HR;
+      fb.RBI=(fb.RBI||0)-player.RBI; fb.SB=(fb.SB||0)-player.SB;
+      fb.BA=fb._AB>0?fb._H/fb._AB:0;
+      tb._AB=(tb._AB||0)+player.AB; tb._H=(tb._H||0)+player.H;
+      tb.R=(tb.R||0)+player.R; tb.HR=(tb.HR||0)+player.HR;
+      tb.RBI=(tb.RBI||0)+player.RBI; tb.SB=(tb.SB||0)+player.SB;
+      tb.BA=tb._AB>0?tb._H/tb._AB:0;
+    } else {
+      const fp=f.pitching, tp=t.pitching;
+      fp._IP=(fp._IP||0)-player.IP; fp._ER=(fp._ER||0)-player.ER;
+      fp.K=(fp.K||0)-player.K; fp.QS=(fp.QS||0)-player.QS;
+      fp.W=(fp.W||0)-player.W; fp.SHLD=(fp.SHLD||0)-player.SHLD;
+      fp.ERA=fp._IP>0?(fp._ER*9)/fp._IP:fp.ERA;
+      tp._IP=(tp._IP||0)+player.IP; tp._ER=(tp._ER||0)+player.ER;
+      tp.K=(tp.K||0)+player.K; tp.QS=(tp.QS||0)+player.QS;
+      tp.W=(tp.W||0)+player.W; tp.SHLD=(tp.SHLD||0)+player.SHLD;
+      tp.ERA=tp._IP>0?(tp._ER*9)/tp._IP:tp.ERA;
+    }
+  };
+
+  _tradeSendsA.forEach(p=>swap(p,_tradeTeamA,_tradeTeamB));
+  _tradeSendsB.forEach(p=>swap(p,_tradeTeamB,_tradeTeamA));
+  return mod;
+}
+
+function buildTradeResult() {
+  if (!_tradeSendsA.length&&!_tradeSendsB.length) return "";
+  const mod = applyTrade();
+  if (!mod) return "";
+
+  const before = computeRoto(buildProjectedTeamsWithRos(_ros));
+  const after  = computeRoto(buildProjectedTeamsWithRos(mod));
+  const bA=before.find(t=>t.name===_tradeTeamA), aA=after.find(t=>t.name===_tradeTeamA);
+  const bB=before.find(t=>t.name===_tradeTeamB), aB=after.find(t=>t.name===_tradeTeamB);
+  if (!bA||!aA||!bB||!aB) return `<div class="trade-hint">Re-capture ROS data to enable trade analysis.</div>`;
+
+  const catRows = ALL_CATS.map(cat => {
+    const dA=aA.pts[cat]-bA.pts[cat], dB=aB.pts[cat]-bB.pts[cat];
+    const cA=dA>0?"#22c55e":dA<0?"#ef4444":"#64748b";
+    const cB=dB>0?"#22c55e":dB<0?"#ef4444":"#64748b";
+    return `<tr>
+      <td style="color:${cA};font-weight:700">${dA>0?"▲":dA<0?"▼":"—"} ${dA>0?"+":""}${dA}</td>
+      <td style="text-align:center;color:var(--text);font-weight:600">${CAT_LABELS[cat]}</td>
+      <td style="color:${cB};font-weight:700;text-align:right">${dB>0?"▲":dB<0?"▼":"—"} ${dB>0?"+":""}${dB}</td>
+    </tr>`;
+  }).join("");
+
+  const dPtsA=(aA.total-bA.total), dPtsB=(aB.total-bB.total);
+  const dRankA=after.findIndex(t=>t.name===_tradeTeamA)-before.findIndex(t=>t.name===_tradeTeamA);
+  const dRankB=after.findIndex(t=>t.name===_tradeTeamB)-before.findIndex(t=>t.name===_tradeTeamB);
+
+  const verdict = dPtsA>dPtsB
+    ? `✅ ${_tradeTeamA} wins (+${dPtsA.toFixed(1)} pts)`
+    : dPtsB>dPtsA
+    ? `✅ ${_tradeTeamB} wins (+${dPtsB.toFixed(1)} pts)`
+    : `⚖️ Even trade`;
+
+  const standRows = after.map((t,i) => {
+    const rc=before.findIndex(b=>b.name===t.name)-i;
+    const involved=t.name===_tradeTeamA||t.name===_tradeTeamB;
+    return `<tr style="${involved?"background:var(--surface2);":""}">
+      <td>${rankBadge(i)}${t.name}</td>
+      <td class="pts-cell">${Math.round(t.total)}</td>
+      <td style="text-align:right;color:${rc>0?"#22c55e":rc<0?"#ef4444":"#64748b"}">${rc>0?"▲"+rc:rc<0?"▼"+Math.abs(rc):"—"}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+    <div class="result-header">Trade Impact</div>
+    <table class="impact-table">
+      <tr><th>${_tradeTeamA}</th><th style="text-align:center">CAT</th><th>Opponent</th></tr>
+      ${catRows}
+      <tr class="divider">
+        <td style="color:${dPtsA>=0?"#22c55e":"#ef4444"};font-weight:700">${dPtsA>0?"+":""}${dPtsA.toFixed(1)}</td>
+        <td style="text-align:center;color:var(--muted);font-size:10px">ROTO PTS</td>
+        <td style="color:${dPtsB>=0?"#22c55e":"#ef4444"};font-weight:700;text-align:right">${dPtsB>0?"+":""}${dPtsB.toFixed(1)}</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);font-size:10px">${dRankA<0?"▲"+Math.abs(dRankA)+" spots":dRankA>0?"▼"+dRankA+" spots":"No change"}</td>
+        <td style="text-align:center;color:var(--muted);font-size:10px">RANK</td>
+        <td style="text-align:right;color:var(--muted);font-size:10px">${dRankB<0?"▲"+Math.abs(dRankB)+" spots":dRankB>0?"▼"+dRankB+" spots":"No change"}</td>
+      </tr>
+    </table>
+    <div class="verdict">${verdict}</div>
+    <div class="result-header">Standings After Trade</div>
+    <table><thead><tr><th>Team</th><th>Pts</th><th style="text-align:right">Δ</th></tr></thead>
+    <tbody>${standRows}</tbody></table>`;
+}
+
+// ── Import ────────────────────────────────────────────────────────────────────
+function openImportModal() {
+  document.getElementById("modal-overlay").classList.add("open");
+  document.getElementById("import-msg").textContent = "";
+  document.getElementById("import-textarea").value = "";
+  setTimeout(() => document.getElementById("import-textarea").focus(), 100);
+}
+
+function closeImportModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+}
+
+function doImport() {
+  const raw = document.getElementById("import-textarea").value.trim();
+  const msgEl = document.getElementById("import-msg");
+  if (!raw) { msgEl.textContent = "Paste your JSON first."; msgEl.className="modal-error"; return; }
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch(e) { msgEl.textContent = "Invalid JSON — make sure you copied the whole file."; msgEl.className="modal-error"; return; }
+
+  if (!parsed.standings && !parsed.ros) {
+    msgEl.textContent = "JSON doesn't look right — expected {standings, ros} from the extension export.";
+    msgEl.className = "modal-error"; return;
+  }
+
+  if (parsed.standings) _standings = parsed.standings;
+  if (parsed.ros)       _ros       = parsed.ros;
+  saveData();
+
+  const teamCount = _standings?.teams?.length || 0;
+  const rosCount  = Object.keys(_ros||{}).length;
+  msgEl.textContent = `✅ Imported ${teamCount} teams, ${rosCount} ROS rosters`;
+  msgEl.className = "modal-success";
+
+  setTimeout(() => {
+    closeImportModal();
+    renderStandings();
+    renderTrades();
+  }, 1000);
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll(".nav-tab").forEach(tab => {
+  tab.addEventListener("click", () => {
+    document.querySelectorAll(".nav-tab").forEach(t=>t.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    tab.classList.add("active");
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add("active");
+    if (tab.dataset.tab==="trades") renderTrades();
+  });
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.getElementById("btn-import").addEventListener("click", openImportModal);
+document.getElementById("btn-modal-cancel").addEventListener("click", closeImportModal);
+document.getElementById("btn-modal-import").addEventListener("click", doImport);
+document.getElementById("modal-overlay").addEventListener("click", e => {
+  if (e.target===document.getElementById("modal-overlay")) closeImportModal();
+});
+
+loadData();
+renderStandings();
+</script>
+</body>
+</html>
