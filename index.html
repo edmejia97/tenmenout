@@ -491,6 +491,94 @@
     .data-dot.stale { background: var(--accent); }
     .data-dot.missing { background: var(--red); }
 
+
+    /* ── Capture tab ── */
+    .capture-section { padding: 4px 0; }
+    .capture-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .capture-sub {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+    .bm-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .bm-step {
+      font-family: var(--font-head);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent2);
+      margin-bottom: 6px;
+    }
+    .bm-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .bm-link {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--bg);
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: grab;
+      margin-bottom: 12px;
+      transition: opacity 0.15s;
+      user-select: none;
+    }
+    .bm-link:hover { opacity: 0.85; }
+    .bm-link:active { cursor: grabbing; }
+    .bm-instructions {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.8;
+      margin-bottom: 10px;
+    }
+    .bm-instructions code {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text);
+      background: var(--bg);
+      padding: 2px 5px;
+      border-radius: 3px;
+    }
+    .bm-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 6px 8px;
+      background: var(--bg);
+      border-radius: 6px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .status-dot.ok      { background: var(--green); }
+    .status-dot.missing { background: var(--red); }
+
   </style>
 </head>
 <body>
@@ -507,6 +595,7 @@
   <nav>
     <div class="nav-tab active" data-tab="standings">Standings</div>
     <div class="nav-tab" data-tab="trades">Trades</div>
+    <div class="nav-tab" data-tab="capture">⚡ Capture</div>
   </nav>
 
   <main>
@@ -537,6 +626,175 @@
           <div class="empty-title">No Data Yet</div>
           <div class="empty-body">Import your league data first to use the trade analyzer.</div>
         </div>
+      </div>
+    </div>
+
+
+    <!-- CAPTURE PANEL -->
+    <div class="panel" id="panel-capture">
+      <div class="capture-section">
+        <div class="capture-title">📡 Capture From CBS</div>
+        <div class="capture-sub">
+          Drag both buttons below to your bookmarks bar. Then go to your CBS pages, click the bookmarklet, and the data appears here automatically — no copy-paste needed.
+        </div>
+
+        <div class="bm-card">
+          <div class="bm-step">STEP 1</div>
+          <div class="bm-label">Drag to bookmarks bar:</div>
+          <a class="bm-link" href="javascript:(function(){function parseNum(s){if(!s)return 0;s=s.replace(/,/g,"").trim();if(s==="-"||s===""||s==="—")return 0;var n=parseFloat(s);return isNaN(n)?0:n;}
+function parseCategoryTable(table){
+  var result={},currentCat=null;
+  Array.from(table.querySelectorAll("tr")).forEach(function(row){
+    var hasTh=row.querySelectorAll("th").length>0;
+    if(hasTh){
+      var cells=Array.from(row.querySelectorAll("th")).map(function(c){return c.textContent.trim();});
+      if(cells[0]==="Team"&&cells.length>=3){currentCat=cells[1];result[currentCat]={};}
+      return;
+    }
+    if(!currentCat)return;
+    var cells=Array.from(row.querySelectorAll("td")).map(function(c){return c.textContent.trim();});
+    if(cells.length>=2&&cells[0])result[currentCat][cells[0]]={value:parseNum(cells[1]),pts:parseNum(cells[2]||"0")};
+  });
+  return result;
+}
+function scrapeStandings(){
+  var tables=document.querySelectorAll("table");
+  if(tables.length<3)return{error:"Expected 3+ tables. Navigate to /standings/overall first."};
+  var overall={};
+  Array.from(tables[0].querySelectorAll("tr")).forEach(function(row){
+    if(row.querySelectorAll("th").length>0)return;
+    var c=Array.from(row.querySelectorAll("td")).map(function(x){return x.textContent.trim();});
+    if(c.length>=5&&c[1])overall[c[1]]={rank:parseNum(c[0]),battingPts:parseNum(c[2]),pitchingPts:parseNum(c[3]),totalPts:parseNum(c[4])};
+  });
+  var batTable=null,pitTable=null;
+  for(var t=1;t<tables.length;t++){
+    var hdrs=Array.from(tables[t].querySelectorAll("th")).map(function(h){return h.textContent.trim();}).join(",");
+    if(/\bBA\b/.test(hdrs)&&!batTable)batTable=tables[t];
+    if(/\bERA\b/.test(hdrs)&&!pitTable)pitTable=tables[t];
+  }
+  if(!batTable)return{error:"Could not find batting breakdown table."};
+  if(!pitTable)return{error:"Could not find pitching breakdown table."};
+  var bat=parseCategoryTable(batTable),pit=parseCategoryTable(pitTable);
+  var shdKey=pit["SHD"]?"SHD":(pit["SHLD"]?"SHLD":"SHD");
+  var teamNames=Object.keys(bat["BA"]||pit["ERA"]||overall);
+  if(!teamNames.length)return{error:"Could not extract team names."};
+  var teams=teamNames.map(function(name){
+    return{name:name,overall:overall[name]||null,
+      batting:{BA:((bat["BA"]||{})[name]||{}).value||0,R:((bat["R"]||{})[name]||{}).value||0,HR:((bat["HR"]||{})[name]||{}).value||0,RBI:((bat["RBI"]||{})[name]||{}).value||0,SB:((bat["SB"]||{})[name]||{}).value||0},
+      pitching:{ERA:((pit["ERA"]||{})[name]||{}).value||0,K:((pit["K"]||{})[name]||{}).value||0,QS:((pit["QS"]||{})[name]||{}).value||0,SHLD:((pit[shdKey]||{})[name]||{}).value||0,W:((pit["W"]||{})[name]||{}).value||0},
+      catPts:{BA:((bat["BA"]||{})[name]||{}).pts||0,R:((bat["R"]||{})[name]||{}).pts||0,HR:((bat["HR"]||{})[name]||{}).pts||0,RBI:((bat["RBI"]||{})[name]||{}).pts||0,SB:((bat["SB"]||{})[name]||{}).pts||0,ERA:((pit["ERA"]||{})[name]||{}).pts||0,K:((pit["K"]||{})[name]||{}).pts||0,QS:((pit["QS"]||{})[name]||{}).pts||0,SHLD:((pit[shdKey]||{})[name]||{}).pts||0,W:((pit["W"]||{})[name]||{}).pts||0}
+    };
+  });
+  return{teams:teams,teamCount:teams.length,source:"standings",capturedAt:new Date().toISOString()};
+}var data=scrapeStandings();if(data.error){alert("❌ "+data.error);}else{localStorage.setItem("tenmenout_standings",JSON.stringify(data));localStorage.setItem("tenmenout_capture_ts_standings",Date.now());window.dispatchEvent(new StorageEvent("storage",{key:"tenmenout_standings",newValue:JSON.stringify(data)}));alert("✅ Standings captured! "+data.teamCount+" teams. Switch to the Ten Men Out tab.");}}())" onclick="return false;">📊 Capture Standings</a>
+          <div class="bm-instructions">
+            Then go to:<br>
+            <code>tenmenout.baseball.cbssports.com/standings/overall</code><br>
+            Click the bookmarklet → switch back here.
+          </div>
+          <div class="bm-status" id="status-standings">
+            <span class="status-dot missing"></span> Not captured yet
+          </div>
+        </div>
+
+        <div class="bm-card">
+          <div class="bm-step">STEP 2</div>
+          <div class="bm-label">Drag to bookmarks bar:</div>
+          <a class="bm-link" href="javascript:(function(){function parseNum(s){if(!s)return 0;s=s.replace(/,/g,"").trim();if(s==="-"||s===""||s==="—")return 0;var n=parseFloat(s);return isNaN(n)?0:n;}
+function getTeamNameForTable(table){
+  var rows=Array.from(table.querySelectorAll("tr"));
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].querySelectorAll("th").length>0)continue;
+    var text=rows[i].textContent.trim().split("\n")[0].trim();
+    if(!text||/^(Batters|Pitchers|Action|Player|AB|AVG|INNs)$/i.test(text))continue;
+    if(text.length>=2&&text.length<=50&&!/^\d/.test(text))return text;
+  }
+  return null;
+}
+function getUniqueDataRows(table){
+  var rows=Array.from(table.querySelectorAll("tr")),dataRows=[];
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].querySelectorAll("th").length>0)continue;
+    var cells=Array.from(rows[i].querySelectorAll("td")).map(function(c){return c.textContent.trim();});
+    if(cells.length<5)continue;
+    var col2=cells[2]||"";
+    if(/^totals?$/i.test(col2)||/^totals?$/i.test(cells[0]))break;
+    if(/^(Batters|Pitchers)$/i.test(col2)||/^(Batters|Pitchers)$/i.test(cells[0]))continue;
+    if(!col2&&cells.filter(Boolean).length<=2)continue;
+    dataRows.push(cells);
+  }
+  return dataRows;
+}
+function sumBattingTable(table){
+  var headers=Array.from(table.querySelectorAll("th")).map(function(h){return h.textContent.trim();});
+  var uh=headers.slice(0,Math.ceil(headers.length/2));
+  var col=function(n){return uh.indexOf(n);};
+  var abI=col("AB"),hI=col("H"),rI=col("R"),hrI=col("HR"),rbiI=col("RBI"),sbI=col("SB"),avgI=col("AVG");
+  var tAB=0,tH=0,tR=0,tHR=0,tRBI=0,tSB=0,players=[];
+  getUniqueDataRows(table).forEach(function(c){
+    var ab=abI>=0?parseNum(c[abI]):0,h=hI>=0?parseNum(c[hI]):0,avg=avgI>=0?parseNum(c[avgI]):0;
+    var r=rI>=0?parseNum(c[rI]):0,hr=hrI>=0?parseNum(c[hrI]):0,rbi=rbiI>=0?parseNum(c[rbiI]):0,sb=sbI>=0?parseNum(c[sbI]):0;
+    var pname=(c[2]||"").split(/[\n\r]/)[0].trim();
+    var eAB=ab,eH=h;
+    if(ab>0){tAB+=ab;tH+=h;}else if(avg>0){eAB=400;eH=avg*400;tAB+=eAB;tH+=eH;}
+    tR+=r;tHR+=hr;tRBI+=rbi;tSB+=sb;
+    if(pname)players.push({name:pname,type:"batter",AB:eAB,H:eH,R:r,HR:hr,RBI:rbi,SB:sb,BA:eAB>0?eH/eAB:avg,ERA:0,IP:0,ER:0,K:0,QS:0,W:0,SHLD:0});
+  });
+  return{BA:tAB>0?tH/tAB:0,R:tR,HR:tHR,RBI:tRBI,SB:tSB,_AB:tAB,_H:tH,players:players};
+}
+function sumPitchingTable(table){
+  var headers=Array.from(table.querySelectorAll("th")).map(function(h){return h.textContent.trim();});
+  var uh=headers.slice(0,Math.ceil(headers.length/2));
+  var col=function(n){return uh.indexOf(n);};
+  var innI=col("INNs"),qsI=col("QS"),wI=col("W"),sI=col("S"),hdI=col("HD"),kI=col("K"),eraI=col("ERA");
+  var tINN=0,tER=0,tK=0,tQS=0,tW=0,tS=0,tHD=0,players=[];
+  getUniqueDataRows(table).forEach(function(c){
+    var inn=innI>=0?parseNum(c[innI]):0,era=eraI>=0?parseNum(c[eraI]):0;
+    var k=kI>=0?parseNum(c[kI]):0,qs=qsI>=0?parseNum(c[qsI]):0,w=wI>=0?parseNum(c[wI]):0;
+    var s=sI>=0?parseNum(c[sI]):0,hd=hdI>=0?parseNum(c[hdI]):0,er=inn>0?era*inn/9:0;
+    var pname=(c[2]||"").split(/[\n\r]/)[0].trim();
+    if(inn>0){tINN+=inn;tER+=er;}
+    tK+=k;tQS+=qs;tW+=w;tS+=s;tHD+=hd;
+    if(pname)players.push({name:pname,type:"pitcher",AB:0,H:0,R:0,HR:0,RBI:0,SB:0,BA:0,IP:inn,ER:er,ERA:era,K:k,QS:qs,W:w,SHLD:s+hd});
+  });
+  return{ERA:tINN>0?(tER*9)/tINN:0,K:tK,QS:tQS,W:tW,SHLD:tS+tHD,_IP:tINN,_ER:tER,players:players};
+}
+function scrapeROS(){
+  var allTables=Array.from(document.querySelectorAll("table"));
+  if(allTables.length<2)return{error:"No tables found."};
+  var fh=Array.from(allTables[0].querySelectorAll("th")).map(function(h){return h.textContent.trim();}).join(",");
+  if(!/\b(AB|AVG|INNs|ERA)\b/.test(fh))return{error:"Navigate to Players→Projections→All Teams→Rest of Season first."};
+  var rosByTeam={},seen=new Set();
+  for(var i=0;i<allTables.length;i++){
+    var t=allTables[i];
+    var hdrs=Array.from(t.querySelectorAll("th")).map(function(h){return h.textContent.trim();}).join(",");
+    if(!/\bAB\b/.test(hdrs)||!/\bAVG\b/.test(hdrs))continue;
+    var teamName=getTeamNameForTable(t);
+    if(!teamName||seen.has(teamName))continue;
+    seen.add(teamName);
+    var pitTable=null;
+    for(var j=i+1;j<allTables.length&&j<=i+3;j++){
+      var ph=Array.from(allTables[j].querySelectorAll("th")).map(function(h){return h.textContent.trim();}).join(",");
+      if(/\bINNs\b/.test(ph)&&/\bERA\b/.test(ph)){pitTable=allTables[j];break;}
+    }
+    var batting=sumBattingTable(t),pitching=pitTable?sumPitchingTable(pitTable):null;
+    var allPlayers=(batting.players||[]).map(function(p){return Object.assign({},p,{fantasyTeam:teamName});})
+      .concat((pitching?pitching.players||[]:[]).map(function(p){return Object.assign({},p,{fantasyTeam:teamName});}));
+    rosByTeam[teamName]={teamName:teamName,batting:batting,pitching:pitching,players:allPlayers,source:"ros_projections",capturedAt:new Date().toISOString()};
+  }
+  return{rosByTeam:rosByTeam,teamCount:Object.keys(rosByTeam).length,source:"ros_all_teams",capturedAt:new Date().toISOString()};
+}var result=scrapeROS();if(result.error){alert("❌ "+result.error);}else{localStorage.setItem("tenmenout_ros",JSON.stringify(result.rosByTeam));localStorage.setItem("tenmenout_capture_ts_ros",Date.now());window.dispatchEvent(new StorageEvent("storage",{key:"tenmenout_ros",newValue:JSON.stringify(result.rosByTeam)}));alert("✅ ROS captured! "+result.teamCount+" teams. Switch to the Ten Men Out tab.");}}())" onclick="return false;">📈 Capture ROS Projections</a>
+          <div class="bm-instructions">
+            Then go to your CBS stats page:<br>
+            Players → <strong>Projections</strong> tab → <strong>All Teams</strong> → <strong>Rest of Season</strong><br>
+            Click the bookmarklet → switch back here.
+          </div>
+          <div class="bm-status" id="status-ros">
+            <span class="status-dot missing"></span> Not captured yet
+          </div>
+        </div>
+
+        <button class="btn btn-danger" id="btn-clear-data" style="margin-top:16px">🗑 Clear All Data</button>
       </div>
     </div>
 
@@ -1053,7 +1311,71 @@ document.querySelectorAll(".nav-tab").forEach(tab => {
     tab.classList.add("active");
     document.getElementById(`panel-${tab.dataset.tab}`).classList.add("active");
     if (tab.dataset.tab==="trades") renderTrades();
+    if (tab.dataset.tab==="capture") updateCaptureStatus();
   });
+});
+
+
+// ── Capture tab ──────────────────────────────────────────────────────────────
+
+function updateCaptureStatus() {
+  const sEl = document.getElementById("status-standings");
+  const rEl = document.getElementById("status-ros");
+  if (!sEl || !rEl) return;
+
+  if (_standings?.teams) {
+    const ts = localStorage.getItem("tenmenout_capture_ts_standings");
+    const ago = ts ? timeSince(parseInt(ts)) : "";
+    sEl.innerHTML = `<span class="status-dot ok"></span> ✅ ${_standings.teams.length} teams captured${ago ? " · " + ago : ""}`;
+  } else {
+    sEl.innerHTML = `<span class="status-dot missing"></span> Not captured yet`;
+  }
+
+  const rosTeams = Object.keys(_ros || {});
+  if (rosTeams.length) {
+    const ts = localStorage.getItem("tenmenout_capture_ts_ros");
+    const ago = ts ? timeSince(parseInt(ts)) : "";
+    rEl.innerHTML = `<span class="status-dot ok"></span> ✅ ${rosTeams.length} teams captured${ago ? " · " + ago : ""}`;
+  } else {
+    rEl.innerHTML = `<span class="status-dot missing"></span> Not captured yet`;
+  }
+}
+
+function timeSince(ts) {
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return mins + "m ago";
+  return Math.floor(mins / 60) + "h ago";
+}
+
+// Listen for bookmarklet data written to localStorage from the CBS tab
+window.addEventListener("storage", (e) => {
+  if (e.key === "tenmenout_standings" && e.newValue) {
+    try {
+      _standings = JSON.parse(e.newValue);
+      updateCaptureStatus();
+      renderStandings();
+    } catch(err) {}
+  }
+  if (e.key === "tenmenout_ros" && e.newValue) {
+    try {
+      _ros = JSON.parse(e.newValue);
+      updateCaptureStatus();
+      renderStandings();
+    } catch(err) {}
+  }
+});
+
+document.getElementById("btn-clear-data")?.addEventListener("click", () => {
+  if (!confirm("Clear all captured standings and ROS data?")) return;
+  _standings = null; _ros = null;
+  localStorage.removeItem("tenmenout_standings");
+  localStorage.removeItem("tenmenout_ros");
+  localStorage.removeItem("tenmenout_capture_ts_standings");
+  localStorage.removeItem("tenmenout_capture_ts_ros");
+  updateCaptureStatus();
+  renderStandings();
+  renderTrades();
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -1066,6 +1388,7 @@ document.getElementById("modal-overlay").addEventListener("click", e => {
 
 loadData();
 renderStandings();
+updateCaptureStatus();
 </script>
 </body>
 </html>
